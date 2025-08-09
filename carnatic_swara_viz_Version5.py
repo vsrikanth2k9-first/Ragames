@@ -417,7 +417,6 @@ with tab2:
         y = st.session_state.analysis["y"]
         sr = st.session_state.analysis["sr"]
         df = st.session_state.analysis["df"]
-        lane_labels = st.session_state.analysis["lane_labels"]
 
         conf_thresh = st.slider("Confidence threshold for questions", 0.0, 1.0, 0.6, 0.05)
         voiced_idx = df.index[df["label"].notna() & (df["conf"] >= conf_thresh)].tolist()
@@ -433,18 +432,6 @@ with tab2:
                 st.success("Correct!")
             else:
                 st.error("Not quite—try the next one.")
-
-        def slice_audio_wav_bytes(y: np.ndarray, sr: int, t0: float, t1: float) -> bytes:
-            t0 = max(0.0, float(t0))
-            t1 = max(t0 + 0.05, float(t1))
-            i0 = int(t0 * sr)
-            i1 = int(t1 * sr)
-            i1 = min(len(y), max(i1, i0 + 1))
-            seg = y[i0:i1].astype(np.float32)
-            buf = io.BytesIO()
-            sf.write(buf, seg, sr, format="WAV", subtype="PCM_16")
-            buf.seek(0)
-            return buf.read()
 
         def new_question_identify_swara():
             if not voiced_idx:
