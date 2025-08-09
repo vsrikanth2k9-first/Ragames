@@ -1,28 +1,17 @@
 """
-Carnatic Swara Visualizer + Mini-Games (Single File)
-----------------------------------------------------
+Carnatic Swara Visualizer + Mini-Games (Headless-safe)
+------------------------------------------------------
 
-What this does:
 - Load audio from YouTube (yt-dlp + ffmpeg) or local upload
 - Detect pitch (pYIN / YIN fallback), auto-estimate Sa (tonic) or manual Sa
-- Map notes to swaras (12-TET approximation) or a custom scale (e.g., a Pann approximation)
-- Visualize swaras over time (2D lanes) and explore a 3D scatter
+- Map notes to swaras (12-TET approximation) or a custom scale (Pann approximations possible)
+- Visualize swaras over time (2D lanes) and a 3D scatter
 - Rough phrase detection to segment the performance
-- Play mini-games to learn/validate swaras and transitions
-
-Setup:
-1) Create venv:
-   python -m venv .venv && source .venv/bin/activate
-2) Install deps:
-   pip install -r requirements.txt
-3) Ensure ffmpeg is available (installed via packages.txt on Streamlit Cloud)
-4) Run:
-   streamlit run carnatic_swara_viz.py
+- Mini-games to learn/validate swaras and transitions
 
 Notes:
+- Configures Matplotlib to use the Agg backend and a temp MPLCONFIGDIR for headless environments (CI/Streamlit Cloud).
 - Pitch tracking is best on monophonic lead melodies.
-- Swara mapping uses 12-TET as a practical approximation.
-- Custom scale mode lets you enter labels and semitone offsets for Pann-like explorations.
 """
 
 import os
@@ -33,11 +22,19 @@ import random
 import shutil
 import tempfile
 import subprocess
-from typing import List, Tuple, Optional, Dict, Any
+from typing import List, Tuple, Dict, Any
+
+# Headless-safe Matplotlib config (must be before importing pyplot)
+os.environ.setdefault("MPLCONFIGDIR", tempfile.mkdtemp())
+try:
+    import matplotlib
+    matplotlib.use("Agg")
+except Exception:
+    pass
+import matplotlib.pyplot as plt
 
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 import plotly.express as px
 import scipy.signal as sps
@@ -120,6 +117,7 @@ def estimate_pitch_track(
         )
         conf = np.nan_to_num(voiced_prob, nan=0.0)
     except Exception:
+        # Fallback: classic YIN (no per-frame confidence available)
         f0 = librosa.yin(y, fmin=fmin, fmax=fmax, frame_length=frame_length, hop_length=hop_length)
         conf = np.ones_like(f0, dtype=float) * 0.5
 
@@ -308,7 +306,7 @@ if accept_btn:
         if yt_url:
             with st.status("Downloading audio from YouTube…", expanded=False):
                 audio_path = download_audio_from_youtube(yt_url, _tmp_dir)
-                st.success(f"Downloaded and converted to WAV.")
+                st.success("Downloaded and converted to WAV.")
         if uploaded is not None and audio_path is None:
             suffix = os.path.splitext(uploaded.name)[1] or ".wav"
             audio_path = os.path.join(_tmp_dir, f"upload{suffix}")
@@ -495,7 +493,7 @@ with tab2:
                 "t0": t0, "t1": t1,
                 "correct": correct,
                 "choices": ["Up", "Down", "Same"],
-                "meta": {"from": str(df["label"].iloc[prev_i]), "to": str(df["label"].iloc[i])}
+                "meta": {"from": str(df['label'].iloc[prev_i]), 'to': str(df['label'].iloc[i])}
             }
 
         colA, colB = st.columns([1,1])
@@ -533,6 +531,6 @@ with tab2:
             st.markdown(
                 "- 'Identify the Swara' plays a short snippet; pick the swara you hear at that moment.\n"
                 "- 'Transition Direction' plays two close frames; decide if the melody moved Up, Down, or stayed the Same.\n"
-                "- You can tighten or loosen the confidence threshold to adjust difficulty.\n"
+                "- Adjust the confidence threshold to change difficulty.\n"
                 "- Use the Custom scale mode to enter labels and semitone offsets for Pann-like explorations."
             )
