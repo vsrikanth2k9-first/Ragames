@@ -30,7 +30,7 @@ Deploy steps:
 2. On Streamlit Community Cloud, create a new app:
    - Repo: `vsrikanth2k9-first/Ragame`
    - Branch: `streamlit-app` (or `main` after merge)
-   - Main file: `carnatic_swara_viz.py`
+   - Main file: `carnatic_swara_app.py`
 3. Deploy. First build can take a few minutes.
 
 ## Notes
